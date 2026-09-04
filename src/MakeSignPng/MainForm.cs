@@ -220,7 +220,7 @@ public sealed class MainForm : Form
         // Việc đó làm trong OnShown khi form đã có kích thước.
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterWidth = 6 };
         split.Panel1.Controls.Add(BuildSourceHost());
-        split.Panel2.Controls.Add(WrapTitled(_resultPanel, "Kết quả (đã tách nền + cắt)"));
+        split.Panel2.Controls.Add(WrapTitled(_resultPanel, "Kết quả"));
         _split = split;
 
         var bottom = new Panel { Dock = DockStyle.Bottom, Height = 26, Padding = new Padding(10, 4, 10, 4) };
