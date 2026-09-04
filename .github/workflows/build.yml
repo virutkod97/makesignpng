@@ -20,23 +20,41 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Publish self-contained single-file EXE (win-x64)
+      # Native libs nạp trong bộ nhớ (KHÔNG giải nén ra %TEMP%) để tránh
+      # bị antivirus / chính sách máy chặn âm thầm khiến app không mở lên.
+      - name: Publish x64 EXE
         run: >
           dotnet publish src/MakeSignPng/MakeSignPng.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true
           -p:EnableCompressionInSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -o publish
+          -p:IncludeNativeLibrariesForSelfExtract=false
+          -o publish/x64
 
-      - name: Upload EXE as build artifact
+      - name: Publish ARM64 EXE
+        run: >
+          dotnet publish src/MakeSignPng/MakeSignPng.csproj
+          -c Release -r win-arm64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=false
+          -o publish/arm64
+
+      - name: Rename outputs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item publish/x64/MakeSignPng.exe   dist/MakeSignPng.exe
+          Copy-Item publish/arm64/MakeSignPng.exe dist/MakeSignPng-arm64.exe
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MakeSignPng-win-x64
-          path: publish/MakeSignPng.exe
+          name: MakeSignPng
+          path: dist/*.exe
           if-no-files-found: error
 
-      - name: Publish/refresh "latest" release with the EXE
+      - name: Publish/refresh "latest" release with the EXEs
         if: github.ref == 'refs/heads/claude/signature-image-png-app-ddmomz'
         uses: softprops/action-gh-release@v2
         with:
@@ -44,6 +62,10 @@ jobs:
           name: MakeSignPng (bản build mới nhất)
           body: |
             Bản build tự động của MakeSignPng (self-contained, không cần cài .NET).
-            Tải `MakeSignPng.exe` bên dưới và chạy trực tiếp trên Windows x64.
+
+            - Máy Windows thường (Intel/AMD 64-bit): tải **MakeSignPng.exe**
+            - Máy Windows ARM (Surface Pro X, Copilot+ PC...): tải **MakeSignPng-arm64.exe**
+
+            Nếu mở không lên, xem nhật ký tại `%TEMP%\MakeSignPng_startup.log`.
           prerelease: true
-          files: publish/MakeSignPng.exe
+          files: dist/*.exe
