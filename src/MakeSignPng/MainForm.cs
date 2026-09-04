@@ -27,14 +27,17 @@ public sealed class MainForm : Form
     private readonly CheckerPanel _preview280 = new(8);
     private readonly CheckerPanel _preview70 = new(6);
 
-    private readonly TrackBar _whiteBar = new() { Minimum = 40, Maximum = 254, TickFrequency = 20, Width = 240 };
-    private readonly TrackBar _inkBar = new() { Minimum = 10, Maximum = 250, TickFrequency = 20, Width = 240 };
+    private readonly TrackBar _whiteBar = new()
+        { Minimum = 40, Maximum = 254, TickFrequency = 20, Width = 240, AutoSize = false, Height = 32 };
+    private readonly TrackBar _inkBar = new()
+        { Minimum = 10, Maximum = 250, TickFrequency = 20, Width = 240, AutoSize = false, Height = 32 };
     private readonly NumericUpDown _despeckle = new() { Minimum = 0, Maximum = 500, Value = 8, Width = 70 };
     private readonly NumericUpDown _padding = new() { Minimum = 0, Maximum = 40, Value = 6, Width = 70 };
-    private readonly NumericUpDown _offX = new()
-        { Minimum = -140, Maximum = 140, Value = 0, Width = 70, TextAlign = HorizontalAlignment.Center };
-    private readonly NumericUpDown _offY = new()
-        { Minimum = -70, Maximum = 70, Value = 0, Width = 70, TextAlign = HorizontalAlignment.Center };
+    // Mô hình dữ liệu offset (ẩn); điều khiển bằng cụm nút mũi tên.
+    private readonly NumericUpDown _offX = new() { Minimum = -140, Maximum = 140, Value = 0 };
+    private readonly NumericUpDown _offY = new() { Minimum = -70, Maximum = 70, Value = 0 };
+    private readonly Label _offReadout = new()
+        { AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(2, 3, 0, 0) };
     private readonly CheckBox _recolor = new() { Text = "Đổi màu mực", AutoSize = true };
     private readonly Button _colorBtn = new() { Text = "Chọn màu", Width = 90, Enabled = false };
     private readonly CheckBox _autoThreshold = new()
@@ -83,6 +86,8 @@ public sealed class MainForm : Form
         _padding.ValueChanged += OnParamChanged;
         _offX.ValueChanged += OnParamChanged;
         _offY.ValueChanged += OnParamChanged;
+        _offX.ValueChanged += (_, _) => _offReadout.Text = OffsetText();
+        _offY.ValueChanged += (_, _) => _offReadout.Text = OffsetText();
         _recolor.CheckedChanged += (_, _) => { _colorBtn.Enabled = _recolor.Checked; OnParamChanged(null, EventArgs.Empty); };
         _colorBtn.Click += OnPickColor;
 
@@ -192,12 +197,8 @@ public sealed class MainForm : Form
         side.Controls.Add(LabeledRow("Lọc nhiễu (px):", _despeckle));
         side.Controls.Add(LabeledRow("Lề chừa (%):", _padding));
 
-        side.Controls.Add(Section("Căn chỉnh vị trí (chỉ cho 280×140)"));
-        side.Controls.Add(LabeledRow("Lệch ngang (px):", _offX));
-        side.Controls.Add(LabeledRow("Lệch dọc (px):", _offY));
-        var centerBtn = new Button { Text = "Về giữa", AutoSize = true, Margin = new Padding(0, 2, 0, 0) };
-        centerBtn.Click += (_, _) => { _offX.Value = 0; _offY.Value = 0; };
-        side.Controls.Add(centerBtn);
+        side.Controls.Add(Section("Căn chỉnh vị trí (280×140)"));
+        side.Controls.Add(BuildOffsetPad());
 
         side.Controls.Add(Spacer());
         side.Controls.Add(Section("Xem trước 280×140"));
@@ -233,18 +234,72 @@ public sealed class MainForm : Form
         Text = text,
         AutoSize = true,
         Font = new Font("Segoe UI", 9f, FontStyle.Bold),
-        Margin = new Padding(0, 8, 0, 2)
+        Margin = new Padding(0, 5, 0, 0)
     };
 
-    private static Control Spacer() => new Panel { Height = 6, Width = 10 };
+    private static Control Spacer() => new Panel { Height = 2, Width = 10, Margin = new Padding(0) };
 
     private static Control LabeledRow(string label, Control ctrl)
     {
-        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 2) };
+        var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 1, 0, 1) };
         row.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
         row.Controls.Add(ctrl);
         return row;
     }
+
+    // Cụm 4 nút mũi tên (trên/dưới/trái/phải) xếp thành dấu +, nút giữa để về 0.
+    private Control BuildOffsetPad()
+    {
+        const int step = 4;
+        Button Arrow(string text, float size = 9f) => new()
+        {
+            Text = text, Width = 32, Height = 26, Margin = new Padding(1),
+            Font = new Font("Segoe UI", size), FlatStyle = FlatStyle.System
+        };
+
+        var up = Arrow("▲"); var down = Arrow("▼");
+        var left = Arrow("◀"); var right = Arrow("▶");
+        var center = Arrow("●", 7f);
+        var tip = new ToolTip();
+        tip.SetToolTip(center, "Về giữa (0, 0)");
+
+        up.Click += (_, _) => Nudge(_offY, -step);
+        down.Click += (_, _) => Nudge(_offY, +step);
+        left.Click += (_, _) => Nudge(_offX, -step);
+        right.Click += (_, _) => Nudge(_offX, +step);
+        center.Click += (_, _) => { _offX.Value = 0; _offY.Value = 0; };
+
+        var grid = new TableLayoutPanel
+        {
+            ColumnCount = 3, RowCount = 3, AutoSize = true,
+            Margin = new Padding(0, 2, 0, 0)
+        };
+        grid.Controls.Add(up, 1, 0);
+        grid.Controls.Add(left, 0, 1);
+        grid.Controls.Add(center, 1, 1);
+        grid.Controls.Add(right, 2, 1);
+        grid.Controls.Add(down, 1, 2);
+
+        _offReadout.Text = OffsetText();
+        var host = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown, AutoSize = true,
+            WrapContents = false, Margin = new Padding(0)
+        };
+        host.Controls.Add(grid);
+        host.Controls.Add(_offReadout);
+        return host;
+    }
+
+    private static void Nudge(NumericUpDown n, int delta)
+    {
+        decimal v = n.Value + delta;
+        if (v < n.Minimum) v = n.Minimum;
+        if (v > n.Maximum) v = n.Maximum;
+        n.Value = v; // kích hoạt ValueChanged -> cập nhật kết quả & nhãn
+    }
+
+    private string OffsetText() => $"Lệch X: {(int)_offX.Value}   Y: {(int)_offY.Value} px";
 
     private static Control WrapTitled(Control inner, string title)
     {
