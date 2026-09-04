@@ -46,10 +46,12 @@ public sealed class MainForm : Form
 
     // Công cụ tẩy nền thủ công trên ảnh gốc.
     private readonly CheckBox _eraseBtn = new()
-        { Text = "Tẩy nền", Appearance = Appearance.Button, AutoSize = true,
-          Padding = new Padding(8, 3, 8, 3), Enabled = false };
+        { Text = "Tẩy nền", Appearance = Appearance.Button, AutoSize = false,
+          Width = 78, Height = 26, TextAlign = ContentAlignment.MiddleCenter,
+          FlatStyle = FlatStyle.System, Enabled = false };
     private readonly NumericUpDown _brushSize = new()
-        { Minimum = 4, Maximum = 200, Value = 24, Width = 60, Enabled = false };
+        { Minimum = 4, Maximum = 200, Value = 24, Width = 60,
+          TextAlign = HorizontalAlignment.Center, Enabled = false };
     private readonly Button _undoBtn = new() { Text = "Hoàn tác", AutoSize = true, Enabled = false };
     private readonly Button _restoreBtn = new() { Text = "Khôi phục", AutoSize = true, Enabled = false };
     private Bitmap? _pristine;                 // ảnh gốc chưa tẩy, để Khôi phục
@@ -62,8 +64,8 @@ public sealed class MainForm : Form
     {
         Text = "MakeSignPng — Tạo chữ ký PNG trong suốt";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1040, 660);
-        Size = new Size(1180, 760);
+        MinimumSize = new Size(1040, 720);
+        Size = new Size(1180, 900);
         Font = new Font("Segoe UI", 9f);
         KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
         TryLoadWindowIcon();
