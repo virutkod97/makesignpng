@@ -33,6 +33,8 @@ public sealed class MainForm : Form
     private readonly NumericUpDown _padding = new() { Minimum = 0, Maximum = 40, Value = 6, Width = 70 };
     private readonly CheckBox _recolor = new() { Text = "Đổi màu mực", AutoSize = true };
     private readonly Button _colorBtn = new() { Text = "Chọn màu", Width = 90, Enabled = false };
+    private readonly CheckBox _autoThreshold = new()
+        { Text = "Tự động ngưỡng khi mở ảnh", AutoSize = true, Checked = true };
     private readonly Label _whiteLbl = new() { AutoSize = true };
     private readonly Label _inkLbl = new() { AutoSize = true };
     private readonly Label _statusLbl = new() { AutoSize = true, ForeColor = Color.DimGray };
@@ -50,6 +52,7 @@ public sealed class MainForm : Form
         Size = new Size(1180, 760);
         Font = new Font("Segoe UI", 9f);
         KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
+        TryLoadWindowIcon();
 
         BuildUi();
 
@@ -61,10 +64,46 @@ public sealed class MainForm : Form
         _recolor.CheckedChanged += (_, _) => { _colorBtn.Enabled = _recolor.Checked; OnParamChanged(null, EventArgs.Empty); };
         _colorBtn.Click += OnPickColor;
 
-        _whiteBar.Value = 200;
-        _inkBar.Value = 120;
+        ApplySettings(AppSettings.Load());
         UpdateThresholdLabels();
     }
+
+    private void TryLoadWindowIcon()
+    {
+        try
+        {
+            using var s = typeof(MainForm).Assembly
+                .GetManifestResourceStream("MakeSignPng.app.ico");
+            if (s != null) Icon = new Icon(s);
+        }
+        catch { /* không có icon cũng không sao */ }
+    }
+
+    private void ApplySettings(AppSettings s)
+    {
+        _loading = true;
+        _whiteBar.Value = Clamp(s.WhiteThreshold, _whiteBar.Minimum, _whiteBar.Maximum);
+        _inkBar.Value = Clamp(s.InkThreshold, _inkBar.Minimum, _inkBar.Maximum);
+        _despeckle.Value = Clamp(s.Despeckle, (int)_despeckle.Minimum, (int)_despeckle.Maximum);
+        _padding.Value = Clamp(s.Padding, (int)_padding.Minimum, (int)_padding.Maximum);
+        _inkColor = Color.FromArgb(s.InkColorArgb);
+        _colorBtn.BackColor = _inkColor;
+        _recolor.Checked = s.Recolor;
+        _colorBtn.Enabled = s.Recolor;
+        _autoThreshold.Checked = s.AutoThresholdOnOpen;
+        _loading = false;
+    }
+
+    private AppSettings CurrentSettings() => new()
+    {
+        WhiteThreshold = _whiteBar.Value,
+        InkThreshold = _inkBar.Value,
+        Recolor = _recolor.Checked,
+        InkColorArgb = _inkColor.ToArgb(),
+        Despeckle = (int)_despeckle.Value,
+        Padding = (int)_padding.Value,
+        AutoThresholdOnOpen = _autoThreshold.Checked
+    };
 
     private void BuildUi()
     {
@@ -114,6 +153,8 @@ public sealed class MainForm : Form
         side.Controls.Add(Section("Ngưỡng mực (tối hơn = đục hoàn toàn)"));
         side.Controls.Add(_inkLbl);
         side.Controls.Add(_inkBar);
+        _autoThreshold.Margin = new Padding(0, 4, 0, 0);
+        side.Controls.Add(_autoThreshold);
 
         side.Controls.Add(Spacer());
         var recolorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
@@ -298,13 +339,17 @@ public sealed class MainForm : Form
         _sourceWork = MakeWorkCopy(loaded, 1400);
         _sourcePanel.Image = _sourceFull;
 
-        // Tự động đoán ngưỡng cho ảnh mới.
-        _loading = true;
-        var (white, ink) = SignatureProcessor.AutoThreshold(_sourceWork);
-        _whiteBar.Value = Clamp(white, _whiteBar.Minimum, _whiteBar.Maximum);
-        _inkBar.Value = Clamp(ink, _inkBar.Minimum, _inkBar.Maximum);
-        _loading = false;
-        UpdateThresholdLabels();
+        // Tự động đoán ngưỡng cho ảnh mới (nếu người dùng bật tùy chọn này);
+        // nếu tắt thì giữ nguyên ngưỡng đã lưu / đang chỉnh.
+        if (_autoThreshold.Checked)
+        {
+            _loading = true;
+            var (white, ink) = SignatureProcessor.AutoThreshold(_sourceWork);
+            _whiteBar.Value = Clamp(white, _whiteBar.Minimum, _whiteBar.Maximum);
+            _inkBar.Value = Clamp(ink, _inkBar.Minimum, _inkBar.Maximum);
+            _loading = false;
+            UpdateThresholdLabels();
+        }
 
         Reprocess();
     }
@@ -515,6 +560,7 @@ public sealed class MainForm : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        CurrentSettings().Save();
         _sourceFull?.Dispose();
         _sourceWork?.Dispose();
         _trimmedPreview?.Dispose();

@@ -1,5 +1,7 @@
 # MakeSignPng
 
+<img src="docs-icon.png" alt="MakeSignPng icon" width="96" align="right" />
+
 Ứng dụng **Windows Forms (.NET 8)** đơn giản để biến ảnh chụp/scan chữ ký (nền giấy trắng)
 thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét và xuất ra hai kích thước:
 
@@ -23,6 +25,8 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
   hình (hoặc ảnh/tệp ảnh đã Copy) mà không cần lưu ra file trước.
 - **Ô nhập tên file lưu**: tự gợi ý theo ảnh nguồn nhưng sửa được tùy ý; khi lưu sẽ tự thêm
   hậu tố `_280x140` / `_70x70`.
+- **Nhớ cấu hình lần cuối**: các ngưỡng, lọc nhiễu, lề, màu mực... được lưu lại và tự nạp
+  cho lần chạy sau (chỉ trừ tên file). Có tùy chọn *Tự động ngưỡng khi mở ảnh* (bật/tắt).
 - **Xem trước trực tiếp** trên nền ô caro (thấy rõ vùng trong suốt), kèm ô xem trước đúng
   280×140 và 70×70.
 - **Xuất chất lượng cao**: khi lưu, ảnh được xử lý lại từ **ảnh gốc đầy đủ** (không phải bản

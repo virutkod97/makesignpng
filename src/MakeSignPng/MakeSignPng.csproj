@@ -9,7 +9,13 @@
     <AssemblyName>MakeSignPng</AssemblyName>
     <RootNamespace>MakeSignPng</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Nhúng icon để đặt làm biểu tượng cửa sổ lúc chạy. -->
+    <EmbeddedResource Include="app.ico" />
+  </ItemGroup>
 
 </Project>
