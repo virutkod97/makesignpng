@@ -18,6 +18,7 @@ public sealed class CheckerPanel : Panel
     private int _brushDiameter = 24;
     private Point _mouse;
     private bool _inside;
+    private bool _hidden;   // con trỏ hệ thống đang được ẩn?
 
     public CheckerPanel(int checkerCell = 10)
     {
@@ -34,9 +35,23 @@ public sealed class CheckerPanel : Panel
         set
         {
             _brushCursor = value;
-            Cursor = value ? Cursors.None : Cursors.Default;
+            UpdateCursorVisibility();
             Invalidate();
         }
+    }
+
+    // WinForms không có Cursors.None nên dùng Cursor.Hide()/Show() (cân bằng qua _hidden).
+    private void UpdateCursorVisibility()
+    {
+        bool shouldHide = _brushCursor && _inside;
+        if (shouldHide && !_hidden) { Cursor.Hide(); _hidden = true; }
+        else if (!shouldHide && _hidden) { Cursor.Show(); _hidden = false; }
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        if (_hidden) { Cursor.Show(); _hidden = false; } // tránh để con trỏ bị ẩn vĩnh viễn
+        base.OnHandleDestroyed(e);
     }
 
     /// <summary>Đường kính vòng tròn cọ, tính theo pixel trên panel.</summary>
@@ -56,6 +71,7 @@ public sealed class CheckerPanel : Panel
     {
         base.OnMouseEnter(e);
         _inside = true;
+        UpdateCursorVisibility();
         if (_brushCursor) Invalidate(BrushRect(_mouse));
     }
 
@@ -63,6 +79,7 @@ public sealed class CheckerPanel : Panel
     {
         base.OnMouseLeave(e);
         _inside = false;
+        UpdateCursorVisibility();
         if (_brushCursor) Invalidate(BrushRect(_mouse));
     }
 
