@@ -238,8 +238,11 @@ public sealed class MainForm : Form
         split.SplitterMoved += (_, _) => PositionSaveGroup();
         _split = split;
 
-        var bottom = new Panel { Dock = DockStyle.Bottom, Height = 26, Padding = new Padding(10, 4, 10, 4) };
+        var bottom = new Panel { Dock = DockStyle.Bottom, Height = 30, Padding = new Padding(10, 0, 10, 0) };
         _statusLbl.Text = "Hãy mở một ảnh chữ ký để bắt đầu.";
+        _statusLbl.AutoSize = false;
+        _statusLbl.Dock = DockStyle.Fill;
+        _statusLbl.TextAlign = ContentAlignment.MiddleLeft;
         bottom.Controls.Add(_statusLbl);
 
         Controls.Add(split);
