@@ -36,6 +36,7 @@ public sealed class MainForm : Form
     private readonly Label _whiteLbl = new() { AutoSize = true };
     private readonly Label _inkLbl = new() { AutoSize = true };
     private readonly Label _statusLbl = new() { AutoSize = true, ForeColor = Color.DimGray };
+    private readonly TextBox _nameBox = new() { Width = 280 };
 
     private Color _inkColor = Color.FromArgb(0, 40, 160);
     private readonly System.Windows.Forms.Timer _debounce = new() { Interval = 150 };
@@ -48,6 +49,7 @@ public sealed class MainForm : Form
         MinimumSize = new Size(1040, 660);
         Size = new Size(1180, 760);
         Font = new Font("Segoe UI", 9f);
+        KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
 
         BuildUi();
 
@@ -68,17 +70,19 @@ public sealed class MainForm : Form
     {
         // ===== Thanh công cụ trên cùng =====
         var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 46, Padding = new Padding(8, 8, 8, 4), WrapContents = false };
-        var openBtn = new Button { Text = "Mở ảnh…", Width = 110, Height = 30 };
+        var openBtn = new Button { Text = "Mở ảnh…", Width = 100, Height = 30 };
+        var pasteBtn = new Button { Text = "Dán từ clipboard", Width = 130, Height = 30 };
         var autoBtn = new Button { Text = "Tự động ngưỡng", Width = 130, Height = 30 };
         var save280 = new Button { Text = "Lưu 280×140", Width = 120, Height = 30 };
         var save70 = new Button { Text = "Lưu 70×70", Width = 110, Height = 30 };
         var saveBoth = new Button { Text = "Lưu cả hai…", Width = 120, Height = 30 };
         openBtn.Click += OnOpen;
+        pasteBtn.Click += OnPaste;
         autoBtn.Click += OnAuto;
         save280.Click += (_, _) => SaveOne(280, 140);
         save70.Click += (_, _) => SaveOne(70, 70);
         saveBoth.Click += OnSaveBoth;
-        top.Controls.AddRange(new Control[] { openBtn, autoBtn, new Label { Width = 20 }, save280, save70, saveBoth });
+        top.Controls.AddRange(new Control[] { openBtn, pasteBtn, autoBtn, new Label { Width = 20 }, save280, save70, saveBoth });
 
         // ===== Bảng điều khiển bên phải =====
         var side = new FlowLayoutPanel
@@ -91,6 +95,18 @@ public sealed class MainForm : Form
             Padding = new Padding(10),
             BackColor = SystemColors.Control
         };
+
+        side.Controls.Add(Section("Tên file lưu (không cần đuôi .png)"));
+        _nameBox.Text = _baseName;
+        side.Controls.Add(_nameBox);
+        var hintLbl = new Label
+        {
+            Text = "Hậu tố _280x140 / _70x70 sẽ tự thêm.",
+            AutoSize = true,
+            ForeColor = Color.DimGray,
+            Margin = new Padding(0, 0, 0, 4)
+        };
+        side.Controls.Add(hintLbl);
 
         side.Controls.Add(Section("Ngưỡng nền (sáng hơn = trong suốt)"));
         side.Controls.Add(_whiteLbl);
@@ -224,9 +240,58 @@ public sealed class MainForm : Form
     private void LoadImage(string path)
     {
         _lastDir = Path.GetDirectoryName(path) ?? _lastDir;
-        _baseName = SanitizeName(Path.GetFileNameWithoutExtension(path));
-
         var loaded = LoadBitmapUnlocked(path);
+        SetSource(loaded, Path.GetFileNameWithoutExtension(path));
+    }
+
+    private void OnPaste(object? sender, EventArgs e)
+    {
+        try
+        {
+            // Trường hợp 1: clipboard chứa ảnh bitmap (ảnh chụp màn hình, Copy ảnh...).
+            if (Clipboard.ContainsImage())
+            {
+                using var img = Clipboard.GetImage();
+                if (img != null)
+                {
+                    SetSource(new Bitmap(img), "chu_ky_clipboard");
+                    _statusLbl.Text = "Đã dán ảnh từ clipboard.";
+                    return;
+                }
+            }
+
+            // Trường hợp 2: clipboard chứa tệp ảnh đã Copy trong Explorer.
+            if (Clipboard.ContainsFileDropList())
+            {
+                foreach (string? f in Clipboard.GetFileDropList())
+                {
+                    if (f != null && IsImageFile(f) && File.Exists(f))
+                    {
+                        LoadImage(f);
+                        _statusLbl.Text = "Đã dán tệp ảnh: " + Path.GetFileName(f);
+                        return;
+                    }
+                }
+            }
+
+            MessageBox.Show(this,
+                "Clipboard không có ảnh.\nHãy chụp màn hình (hoặc Copy một ảnh) rồi bấm lại.",
+                "Không có ảnh trong clipboard",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Không dán được ảnh:\n" + ex.Message, "Lỗi",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>Nạp một ảnh nguồn mới (từ tệp hoặc clipboard) và cập nhật toàn bộ.</summary>
+    private void SetSource(Bitmap loaded, string suggestedName)
+    {
+        _baseName = SanitizeName(suggestedName);
+        _nameBox.Text = _baseName; // gợi ý tên, người dùng có thể sửa lại
+
         _sourceFull?.Dispose();
         _sourceWork?.Dispose();
         _sourceFull = loaded;
@@ -242,6 +307,32 @@ public sealed class MainForm : Form
         UpdateThresholdLabels();
 
         Reprocess();
+    }
+
+    private static bool IsImageFile(string path)
+    {
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".tif" or ".tiff" or ".gif";
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        // Ctrl+V: dán ảnh từ clipboard (trừ khi đang gõ trong ô tên file).
+        if (e.Control && e.KeyCode == Keys.V && !_nameBox.Focused)
+        {
+            OnPaste(this, EventArgs.Empty);
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+        base.OnKeyDown(e);
+    }
+
+    /// <summary>Tên file cơ sở người dùng nhập (đã lọc ký tự cấm), fallback về tên gợi ý.</summary>
+    private string EffectiveBaseName()
+    {
+        string n = SanitizeName(_nameBox.Text);
+        return string.IsNullOrWhiteSpace(n) ? _baseName : n;
     }
 
     private void OnAuto(object? sender, EventArgs e)
@@ -311,7 +402,7 @@ public sealed class MainForm : Form
         {
             Title = $"Lưu chữ ký {w}×{h}",
             Filter = "PNG (*.png)|*.png",
-            FileName = $"{_baseName}_{w}x{h}.png",
+            FileName = $"{EffectiveBaseName()}_{w}x{h}.png",
             InitialDirectory = Directory.Exists(_lastDir) ? _lastDir : null
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
@@ -337,7 +428,7 @@ public sealed class MainForm : Form
         {
             Title = "Chọn tên & thư mục (hậu tố _280x140 / _70x70 sẽ tự thêm)",
             Filter = "PNG (*.png)|*.png",
-            FileName = $"{_baseName}.png",
+            FileName = $"{EffectiveBaseName()}.png",
             InitialDirectory = Directory.Exists(_lastDir) ? _lastDir : null
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
