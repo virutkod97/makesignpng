@@ -164,7 +164,7 @@ public sealed class MainForm : Form
             { AutoSize = true, WrapContents = false, Location = new Point(8, 8), Margin = new Padding(0) };
         leftGroup.Controls.AddRange(new Control[] { openBtn, pasteBtn, autoBtn });
 
-        save280.Margin = new Padding(0, 0, 6, 0); // nút đầu sát mép nhóm để bám đúng đường ngăn cách
+        save280.Margin = new Padding(0, 3, 6, 3); // trái=0 để bám đường ngăn cách, dọc = 3 như 2 nút kia
         _saveGroup = new FlowLayoutPanel
             { AutoSize = true, WrapContents = false, Location = new Point(440, 8), Margin = new Padding(0) };
         _saveGroup.Controls.AddRange(new Control[] { save280, save70, saveBoth });
@@ -383,13 +383,12 @@ public sealed class MainForm : Form
         _rotateBtn.Margin = new Padding(3, 3, 8, 3);
         new ToolTip().SetToolTip(_rotateBtn, "Xoay 90°");
         _rotateBtn.Click += (_, _) => RotateSource();
-        // Tự vẽ icon xoay để căn chính giữa tuyệt đối (không phụ thuộc canh chữ của nút).
+        // Tự vẽ icon xoay bằng vector, đối xứng quanh tâm nút -> căn giữa tuyệt đối.
         _rotateBtn.Paint += (s, e) =>
         {
             var b = (Button)s!;
-            TextRenderer.DrawText(e.Graphics, "⟳", b.Font, b.ClientRectangle,
-                b.Enabled ? SystemColors.ControlText : SystemColors.GrayText,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+            DrawRotateGlyph(e.Graphics, b.ClientRectangle,
+                b.Enabled ? SystemColors.ControlText : SystemColors.GrayText);
         };
 
         header.Controls.AddRange(new Control[]
@@ -497,6 +496,35 @@ public sealed class MainForm : Form
         _undoBtn.Enabled = _undo.Count > 0;
         _sourcePanel.Invalidate();
         Reprocess();
+    }
+
+    // Vẽ biểu tượng xoay (cung tròn hở + mũi tên) căn đúng tâm hình chữ nhật.
+    private static void DrawRotateGlyph(Graphics g, Rectangle bounds, Color color)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        float cx = bounds.X + bounds.Width / 2f;
+        float cy = bounds.Y + bounds.Height / 2f;
+        float r = Math.Min(bounds.Width, bounds.Height) * 0.28f;
+        var rect = new RectangleF(cx - r, cy - r, 2 * r, 2 * r);
+
+        using var pen = new Pen(color, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        // Cung tròn hở ~285°, chừa khe ở phía trên bên phải.
+        const float startAngle = -55f;
+        const float sweep = 285f;
+        g.DrawArc(pen, rect, startAngle, sweep);
+
+        // Mũi tên (tam giác đặc) tại điểm KẾT cung, hướng theo chiều kim đồng hồ.
+        double a = (startAngle + sweep) * Math.PI / 180.0;
+        float px = cx + r * (float)Math.Cos(a);
+        float py = cy + r * (float)Math.Sin(a);
+        float tx = -(float)Math.Sin(a), ty = (float)Math.Cos(a); // tiếp tuyến theo chiều kim đồng hồ
+        float nx = (float)Math.Cos(a), ny = (float)Math.Sin(a);  // pháp tuyến hướng ra ngoài
+        float ah = r * 0.85f, aw = r * 0.55f;
+        var tip = new PointF(px + tx * ah, py + ty * ah);
+        var w1 = new PointF(px + nx * aw, py + ny * aw);
+        var w2 = new PointF(px - nx * aw, py - ny * aw);
+        using var brush = new SolidBrush(color);
+        g.FillPolygon(brush, new[] { tip, w1, w2 });
     }
 
     // Xoay ảnh gốc 90° theo chiều kim đồng hồ (cả bản đầy đủ, bản xem trước và bản gốc lưu).
