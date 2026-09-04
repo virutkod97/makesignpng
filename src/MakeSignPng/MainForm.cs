@@ -180,7 +180,8 @@ public sealed class MainForm : Form
         side.Controls.Add(_autoThreshold);
 
         side.Controls.Add(Spacer());
-        var recolorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0) };
+        var recolorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
+        _recolor.Margin = new Padding(0, 3, 6, 0);
         recolorRow.Controls.Add(_recolor);
         recolorRow.Controls.Add(_colorBtn);
         side.Controls.Add(recolorRow);
@@ -201,6 +202,10 @@ public sealed class MainForm : Form
         _preview70.Size = new Size(70, 70);
         _preview70.Margin = new Padding(0, 2, 0, 8);
         side.Controls.Add(_preview70);
+
+        // Chuẩn hóa mép trái = 0 cho mọi control trong cột để thẳng hàng tuyệt đối.
+        foreach (Control c in side.Controls)
+            c.Margin = new Padding(0, c.Margin.Top, c.Margin.Right, c.Margin.Bottom);
 
         // ===== Khu ảnh: gốc | kết quả =====
         // Lưu ý: KHÔNG đặt Panel1MinSize/Panel2MinSize hay SplitterDistance ở đây —
@@ -280,13 +285,14 @@ public sealed class MainForm : Form
         _offReadout.TextAlign = ContentAlignment.MiddleCenter;
         _offReadout.AutoSize = false;
 
-        // Panel rộng bằng cột bên phải, canh giữa lưới nút và dòng "Lệch".
-        var host = new Panel { Width = 276, Height = 118, Margin = new Padding(0, 2, 0, 0) };
+        // Panel rộng đúng 280px (bằng ô xem trước) để canh giữa lưới nút & dòng "Lệch".
+        var host = new Panel { Width = 280, Height = 118, Margin = new Padding(0, 2, 0, 0) };
         host.Controls.Add(grid);
         host.Controls.Add(_offReadout);
         host.Layout += (_, _) =>
         {
-            grid.Left = Math.Max(0, (host.ClientSize.Width - grid.Width) / 2);
+            int gw = grid.Width > 10 ? grid.Width : 102;
+            grid.Left = Math.Max(0, (host.ClientSize.Width - gw) / 2);
             grid.Top = 2;
             _offReadout.Width = host.ClientSize.Width;
             _offReadout.Left = 0;
