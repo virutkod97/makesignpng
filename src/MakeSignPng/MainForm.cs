@@ -120,9 +120,10 @@ public sealed class MainForm : Form
         side.Controls.Add(_preview70);
 
         // ===== Khu ảnh: gốc | kết quả =====
+        // Lưu ý: KHÔNG đặt Panel1MinSize/Panel2MinSize hay SplitterDistance ở đây —
+        // lúc này SplitContainer chưa có kích thước thật nên sẽ ném InvalidOperationException.
+        // Việc đó làm trong OnShown khi form đã có kích thước.
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterWidth = 6 };
-        split.Panel1MinSize = 200;
-        split.Panel2MinSize = 200;
         split.Panel1.Controls.Add(WrapTitled(_sourcePanel, "Ảnh gốc"));
         split.Panel2.Controls.Add(WrapTitled(_resultPanel, "Kết quả (đã tách nền + cắt)"));
         _split = split;
@@ -410,13 +411,14 @@ public sealed class MainForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        if (_split != null)
+        if (_split != null && _split.Width > 500)
         {
-            int target = _split.Width / 2;
-            int min = _split.Panel1MinSize;
-            int max = _split.Width - _split.Panel2MinSize - _split.SplitterWidth;
-            if (max > min)
-                _split.SplitterDistance = Math.Min(Math.Max(target, min), max);
+            // Đặt SplitterDistance hợp lệ trước (với min-size mặc định), rồi mới siết min-size.
+            int target = Math.Min(Math.Max(_split.Width / 2, 60),
+                                   _split.Width - 60 - _split.SplitterWidth);
+            _split.SplitterDistance = target;
+            _split.Panel1MinSize = 200;
+            _split.Panel2MinSize = 200;
         }
     }
 
