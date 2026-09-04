@@ -35,7 +35,21 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
 4. Bấm **Lưu 280×140**, **Lưu 70×70**, hoặc **Lưu cả hai…** (tự thêm hậu tố
    `_280x140` / `_70x70`).
 
-## Yêu cầu & Build
+## Tải bản chạy sẵn (không cần cài gì)
+
+👉 **[Tải MakeSignPng.exe](https://github.com/virutkod97/makesignpng/releases/download/latest/MakeSignPng.exe)**
+(bản build tự động, self-contained cho Windows x64 — tải về là chạy, không cần cài .NET).
+
+Trang release: https://github.com/virutkod97/makesignpng/releases/tag/latest
+
+> Lần đầu chạy, Windows SmartScreen có thể cảnh báo do file chưa ký số:
+> bấm **More info → Run anyway**.
+
+Mỗi lần có commit mới lên nhánh, **GitHub Actions** tự build lại và cập nhật file
+`MakeSignPng.exe` ở release `latest` (xem tab **Actions** của repo). Có thể bấm
+**Run workflow** trong workflow *Build Windows EXE* để build thủ công bất cứ lúc nào.
+
+## Tự build (tuỳ chọn)
 
 - Windows + [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (hoặc Visual Studio 2022).
 
