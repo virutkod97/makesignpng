@@ -354,22 +354,26 @@ public sealed class MainForm : Form
     {
         var host = new Panel { Dock = DockStyle.Fill };
 
-        var header = new FlowLayoutPanel
+        var header = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 34,
-            WrapContents = false,
+            Height = 36,
+            ColumnCount = 7,
+            RowCount = 1,
             BackColor = SystemColors.ControlLight,
-            Padding = new Padding(6, 4, 6, 4)
+            Padding = new Padding(6, 0, 6, 0)
         };
+        header.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        for (int i = 0; i < 7; i++)
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var lbl = new Label
         {
             Text = "Ảnh gốc",
             AutoSize = true,
-            Margin = new Padding(0, 6, 10, 0),
+            Margin = new Padding(0, 0, 10, 0),
             Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
         };
-        var brushLbl = new Label { Text = "Cỡ cọ:", AutoSize = true, Margin = new Padding(6, 6, 4, 0) };
+        var brushLbl = new Label { Text = "Cỡ cọ:", AutoSize = true, Margin = new Padding(6, 0, 4, 0) };
 
         _sourcePanel.BrushDiameter = (int)_brushSize.Value;
         _eraseBtn.CheckedChanged += (_, _) =>
@@ -383,7 +387,7 @@ public sealed class MainForm : Form
         _brushSize.ValueChanged += (_, _) => _sourcePanel.BrushDiameter = (int)_brushSize.Value;
         _undoBtn.Click += (_, _) => UndoErase();
         _restoreBtn.Click += (_, _) => RestoreOriginal();
-        _rotateBtn.Margin = new Padding(3, 3, 8, 3);
+        _rotateBtn.Margin = new Padding(0, 0, 8, 0);
         new ToolTip().SetToolTip(_rotateBtn, "Xoay 90°");
         _rotateBtn.Click += (_, _) => RotateSource();
         // Tự vẽ icon xoay bằng vector, đối xứng quanh tâm nút -> căn giữa tuyệt đối.
@@ -396,6 +400,9 @@ public sealed class MainForm : Form
 
         header.Controls.AddRange(new Control[]
             { lbl, _rotateBtn, _eraseBtn, brushLbl, _brushSize, _undoBtn, _restoreBtn });
+        // Anchor Left (không Top/Bottom) => mọi control canh giữa theo chiều dọc của hàng.
+        foreach (Control c in header.Controls)
+            c.Anchor = AnchorStyles.Left;
 
         // Sự kiện chuột để tẩy.
         _sourcePanel.MouseDown += SourceMouseDown;
