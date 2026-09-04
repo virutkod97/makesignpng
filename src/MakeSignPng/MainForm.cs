@@ -78,8 +78,8 @@ public sealed class MainForm : Form
     {
         Text = "MakeSignPng — Tạo chữ ký PNG trong suốt";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1160, 700);
-        Size = new Size(1320, 810);
+        MinimumSize = new Size(1160, 730);
+        Size = new Size(1320, 848);
         Font = new Font("Segoe UI", 9f);
         KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
         TryLoadWindowIcon();
