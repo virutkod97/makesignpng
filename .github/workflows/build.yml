@@ -1,0 +1,49 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ "claude/signature-image-png-app-ddmomz" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish self-contained single-file EXE (win-x64)
+        run: >
+          dotnet publish src/MakeSignPng/MakeSignPng.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -o publish
+
+      - name: Upload EXE as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MakeSignPng-win-x64
+          path: publish/MakeSignPng.exe
+          if-no-files-found: error
+
+      - name: Publish/refresh "latest" release with the EXE
+        if: github.ref == 'refs/heads/claude/signature-image-png-app-ddmomz'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: MakeSignPng (bản build mới nhất)
+          body: |
+            Bản build tự động của MakeSignPng (self-contained, không cần cài .NET).
+            Tải `MakeSignPng.exe` bên dưới và chạy trực tiếp trên Windows x64.
+          prerelease: true
+          files: publish/MakeSignPng.exe
