@@ -65,7 +65,7 @@ public sealed class MainForm : Form
         { Minimum = 4, Maximum = 200, Value = 24, Width = 60,
           TextAlign = HorizontalAlignment.Center, Enabled = false };
     private readonly Button _rotateBtn = new()
-        { Text = "⟳", Width = 30, Height = 26, Font = new Font("Segoe UI", 11f), Enabled = false };
+        { Text = "", Width = 30, Height = 26, Font = new Font("Segoe UI", 12f), Enabled = false };
     private readonly Button _undoBtn = new() { Text = "Hoàn tác", AutoSize = true, Enabled = false };
     private readonly Button _restoreBtn = new() { Text = "Khôi phục", AutoSize = true, Enabled = false };
     private Bitmap? _pristine;                 // ảnh gốc chưa tẩy, để Khôi phục
@@ -78,8 +78,8 @@ public sealed class MainForm : Form
     {
         Text = "MakeSignPng — Tạo chữ ký PNG trong suốt";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1100, 720);
-        Size = new Size(1260, 900);
+        MinimumSize = new Size(1160, 700);
+        Size = new Size(1320, 810);
         Font = new Font("Segoe UI", 9f);
         KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
         TryLoadWindowIcon();
@@ -383,6 +383,14 @@ public sealed class MainForm : Form
         _rotateBtn.Margin = new Padding(3, 3, 8, 3);
         new ToolTip().SetToolTip(_rotateBtn, "Xoay 90°");
         _rotateBtn.Click += (_, _) => RotateSource();
+        // Tự vẽ icon xoay để căn chính giữa tuyệt đối (không phụ thuộc canh chữ của nút).
+        _rotateBtn.Paint += (s, e) =>
+        {
+            var b = (Button)s!;
+            TextRenderer.DrawText(e.Graphics, "⟳", b.Font, b.ClientRectangle,
+                b.Enabled ? SystemColors.ControlText : SystemColors.GrayText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        };
 
         header.Controls.AddRange(new Control[]
             { lbl, _rotateBtn, _eraseBtn, brushLbl, _brushSize, _undoBtn, _restoreBtn });
