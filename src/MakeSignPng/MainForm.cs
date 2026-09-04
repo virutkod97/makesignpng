@@ -169,14 +169,6 @@ public sealed class MainForm : Form
         side.Controls.Add(Section("Tên file lưu (không cần đuôi .png)"));
         _nameBox.Text = _baseName;
         side.Controls.Add(_nameBox);
-        var hintLbl = new Label
-        {
-            Text = "Hậu tố _280x140 / _70x70 sẽ tự thêm.",
-            AutoSize = true,
-            ForeColor = Color.DimGray,
-            Margin = new Padding(0, 0, 0, 4)
-        };
-        side.Controls.Add(hintLbl);
 
         side.Controls.Add(Section("Ngưỡng nền (sáng hơn = trong suốt)"));
         side.Controls.Add(_whiteLbl);
@@ -242,7 +234,11 @@ public sealed class MainForm : Form
     private static Control LabeledRow(string label, Control ctrl)
     {
         var row = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 1, 0, 1) };
-        row.Controls.Add(new Label { Text = label, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+        row.Controls.Add(new Label
+        {
+            Text = label, AutoSize = false, Width = 96, Height = 24,
+            TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 2, 4, 0)
+        });
         row.Controls.Add(ctrl);
         return row;
     }
@@ -281,13 +277,22 @@ public sealed class MainForm : Form
         grid.Controls.Add(down, 1, 2);
 
         _offReadout.Text = OffsetText();
-        var host = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown, AutoSize = true,
-            WrapContents = false, Margin = new Padding(0)
-        };
+        _offReadout.TextAlign = ContentAlignment.MiddleCenter;
+        _offReadout.AutoSize = false;
+
+        // Panel rộng bằng cột bên phải, canh giữa lưới nút và dòng "Lệch".
+        var host = new Panel { Width = 276, Height = 118, Margin = new Padding(0, 2, 0, 0) };
         host.Controls.Add(grid);
         host.Controls.Add(_offReadout);
+        host.Layout += (_, _) =>
+        {
+            grid.Left = Math.Max(0, (host.ClientSize.Width - grid.Width) / 2);
+            grid.Top = 2;
+            _offReadout.Width = host.ClientSize.Width;
+            _offReadout.Left = 0;
+            _offReadout.Top = grid.Bottom + 2;
+            host.Height = _offReadout.Bottom + 2;
+        };
         return host;
     }
 
