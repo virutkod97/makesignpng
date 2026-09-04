@@ -13,12 +13,67 @@ public sealed class CheckerPanel : Panel
     private Image? _image;
     private readonly int _cell;
 
+    // Con trỏ dạng vòng tròn cọ (dùng cho chế độ tẩy).
+    private bool _brushCursor;
+    private int _brushDiameter = 24;
+    private Point _mouse;
+    private bool _inside;
+
     public CheckerPanel(int checkerCell = 10)
     {
         _cell = checkerCell;
         DoubleBuffered = true;
         BackColor = Color.White;
         SetStyle(ControlStyles.ResizeRedraw, true);
+    }
+
+    /// <summary>Bật hiển thị con trỏ vòng tròn cọ (ẩn con trỏ hệ thống).</summary>
+    public bool BrushCursor
+    {
+        get => _brushCursor;
+        set
+        {
+            _brushCursor = value;
+            Cursor = value ? Cursors.None : Cursors.Default;
+            Invalidate();
+        }
+    }
+
+    /// <summary>Đường kính vòng tròn cọ, tính theo pixel trên panel.</summary>
+    public int BrushDiameter
+    {
+        get => _brushDiameter;
+        set { _brushDiameter = Math.Max(1, value); if (_brushCursor) Invalidate(); }
+    }
+
+    private Rectangle BrushRect(Point c)
+    {
+        int r = _brushDiameter / 2 + 3;
+        return new Rectangle(c.X - r, c.Y - r, r * 2, r * 2);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        _inside = true;
+        if (_brushCursor) Invalidate(BrushRect(_mouse));
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _inside = false;
+        if (_brushCursor) Invalidate(BrushRect(_mouse));
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (!_brushCursor) return;
+        var dirty = Rectangle.Union(BrushRect(_mouse), BrushRect(e.Location));
+        _mouse = e.Location;
+        dirty.Inflate(4, 4);
+        Invalidate(dirty);
     }
 
     /// <summary>Ảnh hiển thị. Panel không sở hữu ảnh (không tự dispose).</summary>
@@ -57,6 +112,26 @@ public sealed class CheckerPanel : Panel
 
         var r = GetImageRect();
         g.DrawImage(_image, r.X, r.Y, r.Width, r.Height);
+
+        DrawBrushCursor(g);
+    }
+
+    private void DrawBrushCursor(Graphics g)
+    {
+        if (!_brushCursor || !_inside) return;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        float d = Math.Max(2, _brushDiameter);
+        var rect = new RectangleF(_mouse.X - d / 2f, _mouse.Y - d / 2f, d, d);
+
+        // Viền đôi (đen ngoài + trắng trong) để thấy rõ trên mọi nền.
+        using (var outer = new Pen(Color.FromArgb(160, 0, 0, 0), 3f))
+            g.DrawEllipse(outer, rect);
+        using (var inner = new Pen(Color.FromArgb(230, 255, 255, 255), 1.4f))
+            g.DrawEllipse(inner, rect);
+
+        // Chấm tâm nhỏ cho dễ nhắm.
+        using var dot = new SolidBrush(Color.FromArgb(200, 255, 255, 255));
+        g.FillEllipse(dot, _mouse.X - 1.5f, _mouse.Y - 1.5f, 3f, 3f);
     }
 
     /// <summary>Vùng (theo toạ độ panel) mà ảnh đang được vẽ, giữ tỉ lệ & canh giữa.</summary>

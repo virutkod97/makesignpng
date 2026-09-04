@@ -267,13 +267,16 @@ public sealed class MainForm : Form
         };
         var brushLbl = new Label { Text = "Cỡ cọ:", AutoSize = true, Margin = new Padding(6, 6, 4, 0) };
 
+        _sourcePanel.BrushDiameter = (int)_brushSize.Value;
         _eraseBtn.CheckedChanged += (_, _) =>
         {
-            _sourcePanel.Cursor = _eraseBtn.Checked ? Cursors.Cross : Cursors.Default;
+            _sourcePanel.BrushDiameter = (int)_brushSize.Value;
+            _sourcePanel.BrushCursor = _eraseBtn.Checked;
             _statusLbl.Text = _eraseBtn.Checked
                 ? "Chế độ tẩy: kéo chuột lên ảnh gốc để quét bỏ vết nền thừa."
                 : "Đã tắt chế độ tẩy.";
         };
+        _brushSize.ValueChanged += (_, _) => _sourcePanel.BrushDiameter = (int)_brushSize.Value;
         _undoBtn.Click += (_, _) => UndoErase();
         _restoreBtn.Click += (_, _) => RestoreOriginal();
 
