@@ -44,8 +44,10 @@ public sealed class MainForm : Form
         { Text = "", Width = 54, Height = 22, FlatStyle = FlatStyle.Flat, Enabled = false };
     private readonly CheckBox _autoThreshold = new()
         { Text = "Tự động ngưỡng khi mở ảnh", AutoSize = true, Checked = true };
-    private readonly Label _whiteLbl = new() { AutoSize = true };
-    private readonly Label _inkLbl = new() { AutoSize = true };
+    private readonly Label _whiteLbl = new()
+        { AutoSize = true, Font = new Font("Segoe UI", 9f, FontStyle.Bold), Margin = new Padding(0, 6, 0, 0) };
+    private readonly Label _inkLbl = new()
+        { AutoSize = true, Font = new Font("Segoe UI", 9f, FontStyle.Bold), Margin = new Padding(0, 6, 0, 0) };
     private readonly Label _statusLbl = new() { AutoSize = true, ForeColor = Color.DimGray };
     private readonly TextBox _nameBox = new() { Width = 280 };
 
@@ -168,14 +170,12 @@ public sealed class MainForm : Form
             BackColor = SystemColors.Control
         };
 
-        side.Controls.Add(Section("Tên file lưu (không cần đuôi .png)"));
+        side.Controls.Add(Section("Tên file lưu"));
         _nameBox.Text = _baseName;
         side.Controls.Add(_nameBox);
 
-        side.Controls.Add(Section("Ngưỡng nền (sáng hơn = trong suốt)"));
         side.Controls.Add(_whiteLbl);
         side.Controls.Add(_whiteBar);
-        side.Controls.Add(Section("Ngưỡng mực (tối hơn = đục hoàn toàn)"));
         side.Controls.Add(_inkLbl);
         side.Controls.Add(_inkBar);
         _autoThreshold.Margin = new Padding(0, 4, 0, 0);
