@@ -44,6 +44,20 @@ public sealed class MainForm : Form
     private readonly System.Windows.Forms.Timer _debounce = new() { Interval = 150 };
     private bool _loading;
 
+    // Công cụ tẩy nền thủ công trên ảnh gốc.
+    private readonly CheckBox _eraseBtn = new()
+        { Text = "Tẩy nền", Appearance = Appearance.Button, AutoSize = true,
+          Padding = new Padding(8, 3, 8, 3), Enabled = false };
+    private readonly NumericUpDown _brushSize = new()
+        { Minimum = 4, Maximum = 200, Value = 24, Width = 60, Enabled = false };
+    private readonly Button _undoBtn = new() { Text = "Hoàn tác", AutoSize = true, Enabled = false };
+    private readonly Button _restoreBtn = new() { Text = "Khôi phục", AutoSize = true, Enabled = false };
+    private Bitmap? _pristine;                 // ảnh gốc chưa tẩy, để Khôi phục
+    private readonly Stack<Bitmap> _undo = new();
+    private const int UndoLimit = 10;
+    private bool _erasing;
+    private PointF? _lastImgPt;
+
     public MainForm()
     {
         Text = "MakeSignPng — Tạo chữ ký PNG trong suốt";
@@ -181,7 +195,7 @@ public sealed class MainForm : Form
         // lúc này SplitContainer chưa có kích thước thật nên sẽ ném InvalidOperationException.
         // Việc đó làm trong OnShown khi form đã có kích thước.
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterWidth = 6 };
-        split.Panel1.Controls.Add(WrapTitled(_sourcePanel, "Ảnh gốc"));
+        split.Panel1.Controls.Add(BuildSourceHost());
         split.Panel2.Controls.Add(WrapTitled(_resultPanel, "Kết quả (đã tách nền + cắt)"));
         _split = split;
 
@@ -229,6 +243,165 @@ public sealed class MainForm : Form
         host.Controls.Add(inner);
         host.Controls.Add(lbl);
         return host;
+    }
+
+    /// <summary>Ô "Ảnh gốc" kèm thanh công cụ tẩy nền thủ công.</summary>
+    private Control BuildSourceHost()
+    {
+        var host = new Panel { Dock = DockStyle.Fill };
+
+        var header = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 34,
+            WrapContents = false,
+            BackColor = SystemColors.ControlLight,
+            Padding = new Padding(6, 4, 6, 4)
+        };
+        var lbl = new Label
+        {
+            Text = "Ảnh gốc",
+            AutoSize = true,
+            Margin = new Padding(0, 6, 10, 0),
+            Font = new Font("Segoe UI", 8.5f, FontStyle.Bold)
+        };
+        var brushLbl = new Label { Text = "Cỡ cọ:", AutoSize = true, Margin = new Padding(6, 6, 4, 0) };
+
+        _eraseBtn.CheckedChanged += (_, _) =>
+        {
+            _sourcePanel.Cursor = _eraseBtn.Checked ? Cursors.Cross : Cursors.Default;
+            _statusLbl.Text = _eraseBtn.Checked
+                ? "Chế độ tẩy: kéo chuột lên ảnh gốc để quét bỏ vết nền thừa."
+                : "Đã tắt chế độ tẩy.";
+        };
+        _undoBtn.Click += (_, _) => UndoErase();
+        _restoreBtn.Click += (_, _) => RestoreOriginal();
+
+        header.Controls.AddRange(new Control[]
+            { lbl, _eraseBtn, brushLbl, _brushSize, _undoBtn, _restoreBtn });
+
+        // Sự kiện chuột để tẩy.
+        _sourcePanel.MouseDown += SourceMouseDown;
+        _sourcePanel.MouseMove += SourceMouseMove;
+        _sourcePanel.MouseUp += SourceMouseUp;
+
+        host.Controls.Add(_sourcePanel);
+        host.Controls.Add(header);
+        return host;
+    }
+
+    private void SourceMouseDown(object? sender, MouseEventArgs e)
+    {
+        if (!_eraseBtn.Checked || e.Button != MouseButtons.Left || _sourceFull == null) return;
+        var pt = _sourcePanel.PanelToImage(e.Location);
+        if (pt == null) return;
+
+        PushUndoSnapshot();          // lưu trạng thái trước nét tẩy để Hoàn tác
+        _erasing = true;
+        _lastImgPt = pt;
+        EraseSegment(pt.Value, pt.Value);
+        _sourcePanel.Invalidate();
+    }
+
+    private void SourceMouseMove(object? sender, MouseEventArgs e)
+    {
+        if (!_erasing || _sourceFull == null) return;
+        var pt = _sourcePanel.PanelToImage(e.Location);
+        if (pt == null) return;
+        EraseSegment(_lastImgPt ?? pt.Value, pt.Value);
+        _lastImgPt = pt;
+        _sourcePanel.Invalidate();
+        _debounce.Stop();
+        _debounce.Start();           // cập nhật kết quả trong lúc tẩy (có giảm tải)
+    }
+
+    private void SourceMouseUp(object? sender, MouseEventArgs e)
+    {
+        if (!_erasing) return;
+        _erasing = false;
+        _lastImgPt = null;
+        Reprocess();                 // cập nhật kết quả lần cuối sau khi nhả chuột
+    }
+
+    /// <summary>Quét màu trắng (thành nền) dọc đoạn từ a đến b, trên cả ảnh đầy đủ và bản xem trước.</summary>
+    private void EraseSegment(PointF a, PointF b)
+    {
+        if (_sourceFull == null) return;
+        float diameter = (float)_brushSize.Value / Math.Max(_sourcePanel.DisplayScale, 0.0001f);
+        PaintWhiteSegment(_sourceFull, a, b, diameter);
+
+        if (_sourceWork != null)
+        {
+            float ws = (float)_sourceWork.Width / _sourceFull.Width;
+            PaintWhiteSegment(_sourceWork,
+                new PointF(a.X * ws, a.Y * ws),
+                new PointF(b.X * ws, b.Y * ws),
+                diameter * ws);
+        }
+    }
+
+    private static void PaintWhiteSegment(Bitmap bmp, PointF a, PointF b, float diameter)
+    {
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        float r = Math.Max(1f, diameter / 2f);
+        using var pen = new Pen(Color.White, Math.Max(1f, diameter))
+            { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        g.DrawLine(pen, a, b);
+        using var brush = new SolidBrush(Color.White);
+        g.FillEllipse(brush, a.X - r, a.Y - r, r * 2, r * 2);
+        g.FillEllipse(brush, b.X - r, b.Y - r, r * 2, r * 2);
+    }
+
+    private void PushUndoSnapshot()
+    {
+        if (_sourceFull == null) return;
+        _undo.Push(new Bitmap(_sourceFull));
+        while (_undo.Count > UndoLimit) TrimUndoBottom();
+        _undoBtn.Enabled = _undo.Count > 0;
+    }
+
+    // Bỏ phần tử cũ nhất của stack khi vượt hạn mức (giải phóng bộ nhớ).
+    private void TrimUndoBottom()
+    {
+        var keep = _undo.ToArray();          // [top..bottom]
+        keep[^1].Dispose();
+        _undo.Clear();
+        for (int i = keep.Length - 2; i >= 0; i--) _undo.Push(keep[i]);
+    }
+
+    private void UndoErase()
+    {
+        if (_undo.Count == 0 || _sourceFull == null) return;
+        var prev = _undo.Pop();
+        _sourceFull.Dispose();
+        _sourceFull = prev;
+        _sourceWork?.Dispose();
+        _sourceWork = MakeWorkCopy(_sourceFull, 1400);
+        _sourcePanel.Image = _sourceFull;
+        _undoBtn.Enabled = _undo.Count > 0;
+        _sourcePanel.Invalidate();
+        Reprocess();
+    }
+
+    private void RestoreOriginal()
+    {
+        if (_pristine == null) return;
+        ClearUndo();
+        _sourceFull?.Dispose();
+        _sourceWork?.Dispose();
+        _sourceFull = new Bitmap(_pristine);
+        _sourceWork = MakeWorkCopy(_sourceFull, 1400);
+        _sourcePanel.Image = _sourceFull;
+        _sourcePanel.Invalidate();
+        Reprocess();
+        _statusLbl.Text = "Đã khôi phục ảnh gốc (bỏ mọi vết tẩy).";
+    }
+
+    private void ClearUndo()
+    {
+        while (_undo.Count > 0) _undo.Pop().Dispose();
+        _undoBtn.Enabled = false;
     }
 
     private void OnParamChanged(object? sender, EventArgs e)
@@ -333,11 +506,23 @@ public sealed class MainForm : Form
         _baseName = SanitizeName(suggestedName);
         _nameBox.Text = _baseName; // gợi ý tên, người dùng có thể sửa lại
 
+        // Bảo đảm ảnh vẽ được (ảnh indexed như GIF/PNG-8 phải chuyển sang 32bpp).
+        var full = EnsureDrawable(loaded);
+        if (!ReferenceEquals(full, loaded)) loaded.Dispose();
+
         _sourceFull?.Dispose();
         _sourceWork?.Dispose();
-        _sourceFull = loaded;
-        _sourceWork = MakeWorkCopy(loaded, 1400);
+        _sourceFull = full;
+        _sourceWork = MakeWorkCopy(full, 1400);
         _sourcePanel.Image = _sourceFull;
+
+        // Lưu bản gốc để "Khôi phục" và bật công cụ tẩy.
+        _pristine?.Dispose();
+        _pristine = new Bitmap(full);
+        ClearUndo();
+        _eraseBtn.Enabled = true;
+        _brushSize.Enabled = true;
+        _restoreBtn.Enabled = true;
 
         // Tự động đoán ngưỡng cho ảnh mới (nếu người dùng bật tùy chọn này);
         // nếu tắt thì giữ nguyên ngưỡng đã lưu / đang chỉnh.
@@ -519,6 +704,17 @@ public sealed class MainForm : Form
         return new Bitmap(temp);
     }
 
+    // Chuyển ảnh indexed (GIF/PNG-8...) sang 32bpp để có thể vẽ (tẩy) lên được.
+    private static Bitmap EnsureDrawable(Bitmap src)
+    {
+        if ((src.PixelFormat & PixelFormat.Indexed) == 0)
+            return src;
+        var bmp = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(bmp);
+        g.DrawImage(src, 0, 0, src.Width, src.Height);
+        return bmp;
+    }
+
     private static Bitmap MakeWorkCopy(Bitmap full, int maxDim)
     {
         if (full.Width <= maxDim && full.Height <= maxDim)
@@ -561,6 +757,8 @@ public sealed class MainForm : Form
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         CurrentSettings().Save();
+        _pristine?.Dispose();
+        while (_undo.Count > 0) _undo.Pop().Dispose();
         _sourceFull?.Dispose();
         _sourceWork?.Dispose();
         _trimmedPreview?.Dispose();

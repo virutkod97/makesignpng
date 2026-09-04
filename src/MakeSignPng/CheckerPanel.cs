@@ -55,13 +55,42 @@ public sealed class CheckerPanel : Panel
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
+        var r = GetImageRect();
+        g.DrawImage(_image, r.X, r.Y, r.Width, r.Height);
+    }
+
+    /// <summary>Vùng (theo toạ độ panel) mà ảnh đang được vẽ, giữ tỉ lệ & canh giữa.</summary>
+    public RectangleF GetImageRect()
+    {
+        if (_image == null) return RectangleF.Empty;
         double scale = Math.Min((double)Width / _image.Width, (double)Height / _image.Height);
-        scale = Math.Min(scale, 1.0); // không phóng to quá 100% để tránh vỡ nét khi xem
+        scale = Math.Min(scale, 1.0); // không phóng to quá 100%
         if (scale <= 0) scale = 1;
-        int dw = Math.Max(1, (int)(_image.Width * scale));
-        int dh = Math.Max(1, (int)(_image.Height * scale));
-        int ox = (Width - dw) / 2;
-        int oy = (Height - dh) / 2;
-        g.DrawImage(_image, ox, oy, dw, dh);
+        float dw = Math.Max(1, (float)(_image.Width * scale));
+        float dh = Math.Max(1, (float)(_image.Height * scale));
+        float ox = (Width - dw) / 2f;
+        float oy = (Height - dh) / 2f;
+        return new RectangleF(ox, oy, dw, dh);
+    }
+
+    /// <summary>Đổi một điểm trên panel sang toạ độ pixel của ảnh; null nếu ngoài ảnh.</summary>
+    public PointF? PanelToImage(Point p)
+    {
+        if (_image == null) return null;
+        var r = GetImageRect();
+        if (!r.Contains(p)) return null;
+        float ix = (p.X - r.X) / r.Width * _image.Width;
+        float iy = (p.Y - r.Y) / r.Height * _image.Height;
+        return new PointF(ix, iy);
+    }
+
+    /// <summary>Tỉ lệ hiển thị (kích thước vẽ / kích thước ảnh).</summary>
+    public float DisplayScale
+    {
+        get
+        {
+            if (_image == null || _image.Width == 0) return 1f;
+            return GetImageRect().Width / _image.Width;
+        }
     }
 }

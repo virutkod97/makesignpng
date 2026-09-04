@@ -18,6 +18,9 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
 - **Hai thanh trượt** tinh chỉnh trực tiếp:
   - *Ngưỡng nền*: sáng hơn mức này → trong suốt (tăng nếu còn sót nền xám).
   - *Ngưỡng mực*: tối hơn mức này → đục hoàn toàn (giảm nếu nét bị mờ/mất).
+- **Tẩy nền thủ công**: bật *Tẩy nền* rồi kéo chuột trên ô *Ảnh gốc* để quét bỏ những vết
+  nền mà tách tự động không xử lý hết (đóng dấu mờ, bóng, mép giấy...). Có *Cỡ cọ*, *Hoàn
+  tác* và *Khôi phục* (bỏ mọi vết tẩy).
 - **Lọc nhiễu (despeckle)**: xóa các đốm mực nhỏ lẻ.
 - **Lề chừa (padding)**: khoảng trắng chừa quanh chữ ký sau khi cắt.
 - **Đổi màu mực (tùy chọn)**: ép toàn bộ nét về một màu đồng nhất (vd. xanh/đen).
