@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.user
+
+# Visual Studio
+.vs/
+*.suo
+*.userprefs
+
+# Rider
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
