@@ -27,10 +27,11 @@ public sealed class MainForm : Form
     private readonly CheckerPanel _preview280 = new(8);
     private readonly CheckerPanel _preview70 = new(6);
 
+    private const int ColW = 280; // bề rộng chuẩn của cột (bằng ô tên file)
     private readonly TrackBar _whiteBar = new()
-        { Minimum = 40, Maximum = 254, TickFrequency = 20, Width = 240, AutoSize = false, Height = 32 };
+        { Minimum = 40, Maximum = 254, TickFrequency = 20, Width = ColW, AutoSize = false, Height = 32 };
     private readonly TrackBar _inkBar = new()
-        { Minimum = 10, Maximum = 250, TickFrequency = 20, Width = 240, AutoSize = false, Height = 32 };
+        { Minimum = 10, Maximum = 250, TickFrequency = 20, Width = ColW, AutoSize = false, Height = 32 };
     private readonly NumericUpDown _despeckle = new() { Minimum = 0, Maximum = 500, Value = 8, Width = 70 };
     private readonly NumericUpDown _padding = new() { Minimum = 0, Maximum = 40, Value = 6, Width = 70 };
     // Mô hình dữ liệu offset (ẩn); điều khiển bằng cụm nút mũi tên.
@@ -39,7 +40,8 @@ public sealed class MainForm : Form
     private readonly Label _offReadout = new()
         { AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(2, 3, 0, 0) };
     private readonly CheckBox _recolor = new() { Text = "Đổi màu mực", AutoSize = true };
-    private readonly Button _colorBtn = new() { Text = "Chọn màu", Width = 90, Enabled = false };
+    private readonly Button _colorBtn = new()
+        { Text = "", Width = 54, Height = 22, FlatStyle = FlatStyle.Flat, Enabled = false };
     private readonly CheckBox _autoThreshold = new()
         { Text = "Tự động ngưỡng khi mở ảnh", AutoSize = true, Checked = true };
     private readonly Label _whiteLbl = new() { AutoSize = true };
@@ -182,6 +184,11 @@ public sealed class MainForm : Form
         side.Controls.Add(Spacer());
         var recolorRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0), Padding = new Padding(0) };
         _recolor.Margin = new Padding(0, 3, 6, 0);
+        _colorBtn.Margin = new Padding(0, 2, 0, 0);
+        _colorBtn.FlatAppearance.BorderColor = Color.Gray;
+        _colorBtn.FlatAppearance.BorderSize = 1;
+        _colorBtn.BackColor = _inkColor;
+        new ToolTip().SetToolTip(_colorBtn, "Chọn màu mực");
         recolorRow.Controls.Add(_recolor);
         recolorRow.Controls.Add(_colorBtn);
         side.Controls.Add(recolorRow);
@@ -249,20 +256,21 @@ public sealed class MainForm : Form
     }
 
     // Cụm 4 nút mũi tên (trên/dưới/trái/phải) xếp thành dấu +, nút giữa để về 0.
+    // Đặt tọa độ bằng tay, đối xứng tuyệt đối quanh tâm cột (ColW/2).
     private Control BuildOffsetPad()
     {
         const int step = 4;
+        const int bw = 36, bh = 30, gap = 3;
         Button Arrow(string text, float size = 9f) => new()
         {
-            Text = text, Width = 32, Height = 26, Margin = new Padding(1),
+            Text = text, Width = bw, Height = bh,
             Font = new Font("Segoe UI", size), FlatStyle = FlatStyle.System
         };
 
         var up = Arrow("▲"); var down = Arrow("▼");
         var left = Arrow("◀"); var right = Arrow("▶");
         var center = Arrow("●", 7f);
-        var tip = new ToolTip();
-        tip.SetToolTip(center, "Về giữa (0, 0)");
+        new ToolTip().SetToolTip(center, "Về giữa (0, 0)");
 
         up.Click += (_, _) => Nudge(_offY, -step);
         down.Click += (_, _) => Nudge(_offY, +step);
@@ -270,35 +278,28 @@ public sealed class MainForm : Form
         right.Click += (_, _) => Nudge(_offX, +step);
         center.Click += (_, _) => { _offX.Value = 0; _offY.Value = 0; };
 
-        var grid = new TableLayoutPanel
-        {
-            ColumnCount = 3, RowCount = 3, AutoSize = true,
-            Margin = new Padding(0, 2, 0, 0)
-        };
-        grid.Controls.Add(up, 1, 0);
-        grid.Controls.Add(left, 0, 1);
-        grid.Controls.Add(center, 1, 1);
-        grid.Controls.Add(right, 2, 1);
-        grid.Controls.Add(down, 1, 2);
+        int cx = ColW / 2;          // tâm ngang = tâm ô tên file/xem trước
+        int colX = cx - bw / 2;     // cột giữa (up/center/down)
+        up.Location = new Point(colX, 0);
+        center.Location = new Point(colX, bh + gap);
+        down.Location = new Point(colX, 2 * (bh + gap));
+        left.Location = new Point(colX - (bw + gap), bh + gap);
+        right.Location = new Point(colX + (bw + gap), bh + gap);
 
         _offReadout.Text = OffsetText();
         _offReadout.TextAlign = ContentAlignment.MiddleCenter;
         _offReadout.AutoSize = false;
+        _offReadout.Width = ColW;
+        _offReadout.Height = 20;
+        _offReadout.Location = new Point(0, 3 * (bh + gap) + 4);
 
-        // Panel rộng đúng 280px (bằng ô xem trước) để canh giữa lưới nút & dòng "Lệch".
-        var host = new Panel { Width = 280, Height = 118, Margin = new Padding(0, 2, 0, 0) };
-        host.Controls.Add(grid);
-        host.Controls.Add(_offReadout);
-        host.Layout += (_, _) =>
+        var host = new Panel
         {
-            int gw = grid.Width > 10 ? grid.Width : 102;
-            grid.Left = Math.Max(0, (host.ClientSize.Width - gw) / 2);
-            grid.Top = 2;
-            _offReadout.Width = host.ClientSize.Width;
-            _offReadout.Left = 0;
-            _offReadout.Top = grid.Bottom + 2;
-            host.Height = _offReadout.Bottom + 2;
+            Width = ColW,
+            Height = _offReadout.Bottom + 2,
+            Margin = new Padding(0, 2, 0, 0)
         };
+        host.Controls.AddRange(new Control[] { up, center, down, left, right, _offReadout });
         return host;
     }
 
