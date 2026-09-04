@@ -17,6 +17,7 @@ public sealed class MainForm : Form
     private Bitmap? _trimmedPreview;
 
     private SplitContainer? _split;
+    private FlowLayoutPanel? _saveGroup;   // nhóm 3 nút Lưu, bám theo đường ngăn cách
 
     private string _lastDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
     private string _baseName = "chu_ky";
@@ -143,7 +144,7 @@ public sealed class MainForm : Form
     private void BuildUi()
     {
         // ===== Thanh công cụ trên cùng =====
-        var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 46, Padding = new Padding(8, 8, 8, 4), WrapContents = false };
+        var top = new Panel { Dock = DockStyle.Top, Height = 46 };
         var openBtn = new Button { Text = "Mở ảnh…", Width = 100, Height = 30 };
         var pasteBtn = new Button { Text = "Dán từ clipboard", Width = 130, Height = 30 };
         var autoBtn = new Button { Text = "Tự động ngưỡng", Width = 130, Height = 30 };
@@ -156,7 +157,18 @@ public sealed class MainForm : Form
         save280.Click += (_, _) => SaveOne(280, 140);
         save70.Click += (_, _) => SaveOne(70, 70);
         saveBoth.Click += OnSaveBoth;
-        top.Controls.AddRange(new Control[] { openBtn, pasteBtn, autoBtn, new Label { Width = 20 }, save280, save70, saveBoth });
+
+        var leftGroup = new FlowLayoutPanel
+            { AutoSize = true, WrapContents = false, Location = new Point(8, 8), Margin = new Padding(0) };
+        leftGroup.Controls.AddRange(new Control[] { openBtn, pasteBtn, autoBtn });
+
+        save280.Margin = new Padding(0, 0, 6, 0); // nút đầu sát mép nhóm để bám đúng đường ngăn cách
+        _saveGroup = new FlowLayoutPanel
+            { AutoSize = true, WrapContents = false, Location = new Point(440, 8), Margin = new Padding(0) };
+        _saveGroup.Controls.AddRange(new Control[] { save280, save70, saveBoth });
+
+        top.Controls.Add(leftGroup);
+        top.Controls.Add(_saveGroup);
 
         // ===== Bảng điều khiển bên phải =====
         var side = new FlowLayoutPanel
@@ -221,6 +233,7 @@ public sealed class MainForm : Form
         var split = new SplitContainer { Dock = DockStyle.Fill, SplitterWidth = 6 };
         split.Panel1.Controls.Add(BuildSourceHost());
         split.Panel2.Controls.Add(WrapTitled(_resultPanel, "Kết quả"));
+        split.SplitterMoved += (_, _) => PositionSaveGroup();
         _split = split;
 
         var bottom = new Panel { Dock = DockStyle.Bottom, Height = 26, Padding = new Padding(10, 4, 10, 4) };
@@ -844,6 +857,15 @@ public sealed class MainForm : Form
             _split.Panel1MinSize = 200;
             _split.Panel2MinSize = 200;
         }
+        PositionSaveGroup();
+    }
+
+    // Đưa nhóm nút Lưu bám vào mép trái ô "Kết quả" (đường ngăn cách).
+    private void PositionSaveGroup()
+    {
+        if (_split == null || _saveGroup == null) return;
+        _saveGroup.Left = _split.Left + _split.SplitterDistance + _split.SplitterWidth;
+        _saveGroup.Top = 8;
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)
