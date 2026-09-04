@@ -31,6 +31,10 @@ public sealed class MainForm : Form
     private readonly TrackBar _inkBar = new() { Minimum = 10, Maximum = 250, TickFrequency = 20, Width = 240 };
     private readonly NumericUpDown _despeckle = new() { Minimum = 0, Maximum = 500, Value = 8, Width = 70 };
     private readonly NumericUpDown _padding = new() { Minimum = 0, Maximum = 40, Value = 6, Width = 70 };
+    private readonly NumericUpDown _offX = new()
+        { Minimum = -140, Maximum = 140, Value = 0, Width = 70, TextAlign = HorizontalAlignment.Center };
+    private readonly NumericUpDown _offY = new()
+        { Minimum = -70, Maximum = 70, Value = 0, Width = 70, TextAlign = HorizontalAlignment.Center };
     private readonly CheckBox _recolor = new() { Text = "Đổi màu mực", AutoSize = true };
     private readonly Button _colorBtn = new() { Text = "Chọn màu", Width = 90, Enabled = false };
     private readonly CheckBox _autoThreshold = new()
@@ -77,6 +81,8 @@ public sealed class MainForm : Form
         _inkBar.ValueChanged += OnParamChanged;
         _despeckle.ValueChanged += OnParamChanged;
         _padding.ValueChanged += OnParamChanged;
+        _offX.ValueChanged += OnParamChanged;
+        _offY.ValueChanged += OnParamChanged;
         _recolor.CheckedChanged += (_, _) => { _colorBtn.Enabled = _recolor.Checked; OnParamChanged(null, EventArgs.Empty); };
         _colorBtn.Click += OnPickColor;
 
@@ -107,6 +113,8 @@ public sealed class MainForm : Form
         _recolor.Checked = s.Recolor;
         _colorBtn.Enabled = s.Recolor;
         _autoThreshold.Checked = s.AutoThresholdOnOpen;
+        _offX.Value = Clamp(s.OffsetX, (int)_offX.Minimum, (int)_offX.Maximum);
+        _offY.Value = Clamp(s.OffsetY, (int)_offY.Minimum, (int)_offY.Maximum);
         _loading = false;
     }
 
@@ -118,7 +126,9 @@ public sealed class MainForm : Form
         InkColorArgb = _inkColor.ToArgb(),
         Despeckle = (int)_despeckle.Value,
         Padding = (int)_padding.Value,
-        AutoThresholdOnOpen = _autoThreshold.Checked
+        AutoThresholdOnOpen = _autoThreshold.Checked,
+        OffsetX = (int)_offX.Value,
+        OffsetY = (int)_offY.Value
     };
 
     private void BuildUi()
@@ -181,6 +191,13 @@ public sealed class MainForm : Form
         side.Controls.Add(Spacer());
         side.Controls.Add(LabeledRow("Lọc nhiễu (px):", _despeckle));
         side.Controls.Add(LabeledRow("Lề chừa (%):", _padding));
+
+        side.Controls.Add(Section("Căn chỉnh vị trí (chỉ cho 280×140)"));
+        side.Controls.Add(LabeledRow("Lệch ngang (px):", _offX));
+        side.Controls.Add(LabeledRow("Lệch dọc (px):", _offY));
+        var centerBtn = new Button { Text = "Về giữa", AutoSize = true, Margin = new Padding(0, 2, 0, 0) };
+        centerBtn.Click += (_, _) => { _offX.Value = 0; _offY.Value = 0; };
+        side.Controls.Add(centerBtn);
 
         side.Controls.Add(Spacer());
         side.Controls.Add(Section("Xem trước 280×140"));
@@ -605,7 +622,7 @@ public sealed class MainForm : Form
             _trimmedPreview = trimmed;
             _resultPanel.Image = trimmed;
 
-            using var p280 = SignatureProcessor.FitTo(trimmed, 280, 140);
+            using var p280 = SignatureProcessor.FitTo(trimmed, 280, 140, (int)_offX.Value, (int)_offY.Value);
             using var p70 = SignatureProcessor.FitTo(trimmed, 70, 70);
             SwapPreview(_preview280, p280);
             SwapPreview(_preview70, p70);
@@ -695,7 +712,10 @@ public sealed class MainForm : Form
     {
         var opt = CurrentOptions();
         using var trimmed = SignatureProcessor.RemoveBackground(_sourceFull!, opt);
-        return SignatureProcessor.FitTo(trimmed, w, h);
+        bool isMain = w == 280 && h == 140;           // offset chỉ áp cho bản 280×140
+        return SignatureProcessor.FitTo(trimmed, w, h,
+            isMain ? (int)_offX.Value : 0,
+            isMain ? (int)_offY.Value : 0);
     }
 
     private void WarnNoImage() =>

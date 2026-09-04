@@ -123,7 +123,8 @@ public static class SignatureProcessor
     /// Đưa ảnh trong suốt đã cắt vào khung <paramref name="targetW"/> x <paramref name="targetH"/>,
     /// giữ tỉ lệ, canh giữa, phần thừa để trong suốt.
     /// </summary>
-    public static Bitmap FitTo(Bitmap trimmed, int targetW, int targetH)
+    public static Bitmap FitTo(Bitmap trimmed, int targetW, int targetH,
+        int offsetX = 0, int offsetY = 0)
     {
         var canvas = new Bitmap(targetW, targetH, PixelFormat.Format32bppArgb);
         using var gfx = Graphics.FromImage(canvas);
@@ -139,8 +140,8 @@ public static class SignatureProcessor
         double scale = Math.Min((double)targetW / trimmed.Width, (double)targetH / trimmed.Height);
         int drawW = Math.Max(1, (int)Math.Round(trimmed.Width * scale));
         int drawH = Math.Max(1, (int)Math.Round(trimmed.Height * scale));
-        int offX = (targetW - drawW) / 2;
-        int offY = (targetH - drawH) / 2;
+        int offX = (targetW - drawW) / 2 + offsetX;
+        int offY = (targetH - drawH) / 2 + offsetY;
 
         gfx.DrawImage(trimmed, new Rectangle(offX, offY, drawW, drawH));
         return canvas;

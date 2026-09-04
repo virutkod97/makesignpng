@@ -23,6 +23,8 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
   tác* và *Khôi phục* (bỏ mọi vết tẩy).
 - **Lọc nhiễu (despeckle)**: xóa các đốm mực nhỏ lẻ.
 - **Lề chừa (padding)**: khoảng trắng chừa quanh chữ ký sau khi cắt.
+- **Căn chỉnh vị trí (280×140)**: lệch chữ ký sang trái/phải, lên/xuống trong khung 280×140
+  (nút *Về giữa* để đưa lại chính giữa). Bản 70×70 luôn canh giữa.
 - **Đổi màu mực (tùy chọn)**: ép toàn bộ nét về một màu đồng nhất (vd. xanh/đen).
 - **Dán ảnh từ clipboard**: bấm *Dán từ clipboard* hoặc `Ctrl+V` để lấy thẳng ảnh chụp màn
   hình (hoặc ảnh/tệp ảnh đã Copy) mà không cần lưu ra file trước.

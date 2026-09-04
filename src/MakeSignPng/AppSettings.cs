@@ -16,6 +16,8 @@ public sealed class AppSettings
     public int Despeckle { get; set; } = 8;
     public int Padding { get; set; } = 6;
     public bool AutoThresholdOnOpen { get; set; } = true;
+    public int OffsetX { get; set; } = 0;   // lệch ngang cho bản 280x140
+    public int OffsetY { get; set; } = 0;   // lệch dọc cho bản 280x140
 
     private static string FilePath
     {
