@@ -18,6 +18,7 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
 - **Hai thanh trượt** tinh chỉnh trực tiếp:
   - *Ngưỡng nền*: sáng hơn mức này → trong suốt (tăng nếu còn sót nền xám).
   - *Ngưỡng mực*: tối hơn mức này → đục hoàn toàn (giảm nếu nét bị mờ/mất).
+- **Xoay ảnh gốc**: nút ⟳ trên ô *Ảnh gốc*, mỗi lần bấm xoay 90° (cho ảnh chụp ngang).
 - **Tẩy nền thủ công**: bật *Tẩy nền* rồi kéo chuột trên ô *Ảnh gốc* để quét bỏ những vết
   nền mà tách tự động không xử lý hết (đóng dấu mờ, bóng, mép giấy...). Có *Cỡ cọ*, *Hoàn
   tác* và *Khôi phục* (bỏ mọi vết tẩy).

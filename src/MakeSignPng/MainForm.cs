@@ -64,6 +64,8 @@ public sealed class MainForm : Form
     private readonly NumericUpDown _brushSize = new()
         { Minimum = 4, Maximum = 200, Value = 24, Width = 60,
           TextAlign = HorizontalAlignment.Center, Enabled = false };
+    private readonly Button _rotateBtn = new()
+        { Text = "⟳", Width = 30, Height = 26, Font = new Font("Segoe UI", 11f), Enabled = false };
     private readonly Button _undoBtn = new() { Text = "Hoàn tác", AutoSize = true, Enabled = false };
     private readonly Button _restoreBtn = new() { Text = "Khôi phục", AutoSize = true, Enabled = false };
     private Bitmap? _pristine;                 // ảnh gốc chưa tẩy, để Khôi phục
@@ -378,9 +380,12 @@ public sealed class MainForm : Form
         _brushSize.ValueChanged += (_, _) => _sourcePanel.BrushDiameter = (int)_brushSize.Value;
         _undoBtn.Click += (_, _) => UndoErase();
         _restoreBtn.Click += (_, _) => RestoreOriginal();
+        _rotateBtn.Margin = new Padding(3, 3, 8, 3);
+        new ToolTip().SetToolTip(_rotateBtn, "Xoay 90°");
+        _rotateBtn.Click += (_, _) => RotateSource();
 
         header.Controls.AddRange(new Control[]
-            { lbl, _eraseBtn, brushLbl, _brushSize, _undoBtn, _restoreBtn });
+            { lbl, _rotateBtn, _eraseBtn, brushLbl, _brushSize, _undoBtn, _restoreBtn });
 
         // Sự kiện chuột để tẩy.
         _sourcePanel.MouseDown += SourceMouseDown;
@@ -484,6 +489,20 @@ public sealed class MainForm : Form
         _undoBtn.Enabled = _undo.Count > 0;
         _sourcePanel.Invalidate();
         Reprocess();
+    }
+
+    // Xoay ảnh gốc 90° theo chiều kim đồng hồ (cả bản đầy đủ, bản xem trước và bản gốc lưu).
+    private void RotateSource()
+    {
+        if (_sourceFull == null) return;
+        _sourceFull.RotateFlip(RotateFlipType.Rotate90FlipNone);
+        _sourceWork?.RotateFlip(RotateFlipType.Rotate90FlipNone);
+        _pristine?.RotateFlip(RotateFlipType.Rotate90FlipNone);
+        ClearUndo();                 // kích thước đổi -> bỏ lịch sử tẩy cũ
+        _sourcePanel.Image = _sourceFull;
+        _sourcePanel.Invalidate();
+        Reprocess();
+        _statusLbl.Text = "Đã xoay ảnh 90°.";
     }
 
     private void RestoreOriginal()
@@ -622,6 +641,7 @@ public sealed class MainForm : Form
         _pristine?.Dispose();
         _pristine = new Bitmap(full);
         ClearUndo();
+        _rotateBtn.Enabled = true;
         _eraseBtn.Enabled = true;
         _brushSize.Enabled = true;
         _restoreBtn.Enabled = true;
