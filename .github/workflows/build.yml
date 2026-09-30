@@ -37,13 +37,6 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=false
           -o publish
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MakeSignPng-win-x64
-          path: publish/MakeSignPng.exe
-          if-no-files-found: error
-
       # Xác định tag phát hành: từ tag vX.Y.Z được đẩy, hoặc từ tham số workflow_dispatch.
       - name: Resolve release tag
         id: rel
