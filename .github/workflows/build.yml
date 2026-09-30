@@ -5,6 +5,11 @@ on:
     branches: [ "main", "claude/signature-image-png-app-ddmomz" ]
     tags: [ "v*" ]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag phát hành (vd v1.0.0). Để trống = chỉ build, không tạo release."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -39,14 +44,27 @@ jobs:
           path: publish/MakeSignPng.exe
           if-no-files-found: error
 
-      # Release chính thức có version khi đẩy tag vX.Y.Z
-      - name: Publish tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Xác định tag phát hành: từ tag vX.Y.Z được đẩy, hoặc từ tham số workflow_dispatch.
+      - name: Resolve release tag
+        id: rel
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != ''
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Release chính thức có version (không phải prerelease). Action tự tạo tag nếu chưa có.
+      - name: Publish versioned release
+        if: steps.rel.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: MakeSignPng ${{ github.ref_name }}
+          tag_name: ${{ steps.rel.outputs.tag }}
+          name: MakeSignPng ${{ steps.rel.outputs.tag }}
           body: |
-            MakeSignPng ${{ github.ref_name }} — ứng dụng tạo ảnh chữ ký PNG trong suốt.
+            MakeSignPng ${{ steps.rel.outputs.tag }} — ứng dụng tạo ảnh chữ ký PNG trong suốt.
 
             Bản chạy sẵn (self-contained, không cần cài .NET) cho Windows x64:
             tải `MakeSignPng.exe` bên dưới và chạy trực tiếp.
