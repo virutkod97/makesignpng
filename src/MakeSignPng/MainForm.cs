@@ -78,8 +78,8 @@ public sealed class MainForm : Form
     {
         Text = "MakeSignPng — Tạo chữ ký PNG trong suốt";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1160, 730);
-        Size = new Size(1320, 848);
+        MinimumSize = new Size(1260, 730);
+        Size = new Size(1420, 848);
         Font = new Font("Segoe UI", 9f);
         KeyPreview = true; // để bắt Ctrl+V dán ảnh ở mọi nơi trên form
         TryLoadWindowIcon();
@@ -149,12 +149,14 @@ public sealed class MainForm : Form
         var top = new Panel { Dock = DockStyle.Top, Height = 46 };
         var openBtn = new Button { Text = "Mở ảnh…", Width = 100, Height = 30 };
         var pasteBtn = new Button { Text = "Dán từ clipboard", Width = 130, Height = 30 };
+        var batchBtn = new Button { Text = "Xử lý thư mục…", Width = 130, Height = 30 };
         var autoBtn = new Button { Text = "Tự động ngưỡng", Width = 130, Height = 30 };
         var save280 = new Button { Text = "Lưu 280×140", Width = 120, Height = 30 };
         var save70 = new Button { Text = "Lưu 70×70", Width = 110, Height = 30 };
         var saveBoth = new Button { Text = "Lưu cả hai…", Width = 120, Height = 30 };
         openBtn.Click += OnOpen;
         pasteBtn.Click += OnPaste;
+        batchBtn.Click += OnBatch;
         autoBtn.Click += OnAuto;
         save280.Click += (_, _) => SaveOne(280, 140);
         save70.Click += (_, _) => SaveOne(70, 70);
@@ -162,7 +164,7 @@ public sealed class MainForm : Form
 
         var leftGroup = new FlowLayoutPanel
             { AutoSize = true, WrapContents = false, Location = new Point(8, 8), Margin = new Padding(0) };
-        leftGroup.Controls.AddRange(new Control[] { openBtn, pasteBtn, autoBtn });
+        leftGroup.Controls.AddRange(new Control[] { openBtn, pasteBtn, batchBtn, autoBtn });
 
         save280.Margin = new Padding(0, 3, 6, 3); // trái=0 để bám đường ngăn cách, dọc = 3 như 2 nút kia
         _saveGroup = new FlowLayoutPanel
@@ -743,6 +745,13 @@ public sealed class MainForm : Form
         _loading = false;
         UpdateThresholdLabels();
         Reprocess();
+    }
+
+    private void OnBatch(object? sender, EventArgs e)
+    {
+        using var dlg = new BatchForm(CurrentOptions(), (int)_offX.Value, (int)_offY.Value,
+            _autoThreshold.Checked, Directory.Exists(_lastDir) ? _lastDir : null);
+        dlg.ShowDialog(this);
     }
 
     private ProcessOptions CurrentOptions() => new()

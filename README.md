@@ -18,6 +18,11 @@ thành **ảnh PNG chữ ký trong suốt (không nền)**, tự cắt sát nét
 - **Hai thanh trượt** tinh chỉnh trực tiếp:
   - *Ngưỡng nền*: sáng hơn mức này → trong suốt (tăng nếu còn sót nền xám).
   - *Ngưỡng mực*: tối hơn mức này → đục hoàn toàn (giảm nếu nét bị mờ/mất).
+- **Xử lý hàng loạt theo thư mục** (V2): bấm *Xử lý thư mục…*, chọn thư mục nguồn và thư mục
+  đích, ứng dụng tách nền toàn bộ ảnh trong thư mục nguồn và lưu kết quả PNG vào thư mục đích,
+  **giữ nguyên tên tệp gốc**. Chọn cả hai kích thước sẽ tạo thư mục con `280x140` và `70x70`.
+  Dùng chung các thiết lập hiện có (ngưỡng, màu, lọc nhiễu, lề, lệch), có tùy chọn tự động
+  ngưỡng cho từng ảnh; có thanh tiến độ và nhật ký, dừng được giữa chừng.
 - **Xoay ảnh gốc**: nút ⟳ trên ô *Ảnh gốc*, mỗi lần bấm xoay 90° (cho ảnh chụp ngang).
 - **Tẩy nền thủ công**: bật *Tẩy nền* rồi kéo chuột trên ô *Ảnh gốc* để quét bỏ những vết
   nền mà tách tự động không xử lý hết (đóng dấu mờ, bóng, mép giấy...). Có *Cỡ cọ*, *Hoàn

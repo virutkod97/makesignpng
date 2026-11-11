@@ -33,6 +33,26 @@ public sealed class ProcessOptions
 public static class SignatureProcessor
 {
     /// <summary>
+    /// Nạp ảnh từ tệp, trả về bản 32bpp ARGB vẽ được (không giữ khóa tệp, xử lý cả ảnh indexed).
+    /// </summary>
+    public static Bitmap LoadImageFile(string path)
+    {
+        using var temp = new Bitmap(path);
+        var copy = new Bitmap(temp.Width, temp.Height, PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(copy);
+        g.Clear(Color.Transparent);
+        g.DrawImage(temp, new Rectangle(0, 0, temp.Width, temp.Height));
+        return copy;
+    }
+
+    /// <summary>Phần mở rộng ảnh được hỗ trợ (chữ thường, có dấu chấm).</summary>
+    public static bool IsSupportedImage(string path)
+    {
+        string ext = System.IO.Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".tif" or ".tiff" or ".gif";
+    }
+
+    /// <summary>
     /// Tách nền từ ảnh gốc, trả về ảnh 32bpp ARGB đã tự cắt sát chữ ký.
     /// Nếu không tìm thấy nét nào thì trả về bản sao trong suốt cùng kích thước.
     /// </summary>
